@@ -16,7 +16,7 @@ app.use(express.urlencoded({ extended: false }));
 const client_id = 'f84f5c7802c14524b145cd71361da63e';
 const client_secret = 'ce2d849c26de43ec94f16a977dac16ca';
 
-const redirect_uri = 'http://localhost:5000/end';
+const redirect_uri = 'https://esp32-server-t1o0.onrender.com/end';
 
 function generateRandomString(length) {
     let text = '';
