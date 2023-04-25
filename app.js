@@ -28,27 +28,10 @@ function generateRandomString(length) {
     return text;
 }
 
-async function generateCodeChallenge(codeVerifier) {
-    function base64encode(string) {
-        return btoa(String.fromCharCode.apply(null, new Uint8Array(string)))
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_')
-            .replace(/=+$/, '');
-    }
-
-    const encoder = new TextEncoder();
-    const data = encoder.encode(codeVerifier);
-    const digest = await window.crypto.subtle.digest('SHA-256', data);
-
-    return base64encode(digest);
-}
-
 app.get('/', async (req, res) => {
 
-    let codeVerifier = generateRandomString(128);
-
     var state = generateRandomString(16);
-    var scope = 'user-read-private user-read-email';
+    var scope = 'user-read-private user-read-email user-read-playback-position user-read-playback-state user-read-currently-playing';
 
     res.redirect('https://accounts.spotify.com/authorize?' +
         querystring.stringify({
@@ -59,18 +42,6 @@ app.get('/', async (req, res) => {
             state: state
         }
     ));
-
-
-    // const response = await axios.post('https://accounts.spotify.com/api/token', {
-    //     'grant_type': 'client_credentials',
-    //     'client_id': 'f84f5c7802c14524b145cd71361da63e',
-    //     'client_secret': 'ce2d849c26de43ec94f16a977dac16ca'
-    // }, {
-    //     headers: {
-    //         'Content-Type': 'application/x-www-form-urlencoded'
-    //     },
-    // })
-    // res.json(response.data)
 });
 
 app.get('/end', async (req, res) => {
@@ -92,27 +63,51 @@ app.get('/end', async (req, res) => {
             },
             headers: {
               'Authorization': 'Basic ' + (new Buffer.from(client_id + ':' + client_secret).toString('base64'))
-            },
+            }, 
             json: true
           };
 
         request.post(authOptions, async function(error, response, body) {
             if (!error && response.statusCode === 200) {
                 const access_token = body.access_token;
-                console.log(access_token)
-                
-                try {
-                    const result = await axios("https://api.spotify.com/v1/me/player/currently-playing", {
-                        headers: { Authorization: `Bearer ${access_token}` }
-                    });
-    
-                    res.json(result)
-                } catch(e) {
-                    // console.error(e)
-                    res.json('bad')
-                }
+
+                return res.redirect('/access?token=' + access_token)
             }
         });
+    }
+})
+
+function stringify(obj) {
+    let cache = [];
+    let str = JSON.stringify(obj, function(key, value) {
+    if (typeof value === "object" && value !== null) {
+        if (cache.indexOf(value) !== -1) {
+            // Circular reference found, discard key
+            return;
+        }
+        // Store value in our collection
+        cache.push(value);
+    }
+        return value;
+    });
+    cache = null; // reset the cache
+    return str;
+}
+
+app.get('/access', async (req, res) => {
+    const { token } = req.query
+
+    try {
+
+        const result = await axios.get("https://api.spotify.com/v1/me/player", {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const { item } = result.data
+
+        res.json(item.name)
+    } catch(e) {
+        res.json('Error: ' + e)
     }
 })
 
