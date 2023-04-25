@@ -111,6 +111,10 @@ app.get('/access', async (req, res) => {
     }
 })
 
+app.get('/test', (_, res) => {
+    res.json('Kabira')
+})
+
 if(process.env.NODE_ENV === 'production') {
   app.use(express.static('client/build'));
 
